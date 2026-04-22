@@ -40,10 +40,10 @@ def init(project_name):
             f.write(rendered)
         console.print(f"  [green]✔[/green] 명세 템플릿 생성: {target_file.name}")
 
-    cursor_path = base_path / ".cursor"
-    os.makedirs(cursor_path, exist_ok=True)
-    shutil.copy(template_dir / "ai-protocol.md", cursor_path / "rules.md")
-    console.print(f"  [green]✔[/green] AI Agent 규칙 주입: .cursor/rules.md")
+    ai_path = base_path / ".ai"
+    os.makedirs(ai_path, exist_ok=True)
+    shutil.copy(template_dir / "ai-protocol.md", ai_path / "rules.md")
+    console.print(f"  [green]✔[/green] AI Agent 규칙 주입: .ai/rules.md")
     console.print("\n[bold green]✅ 초기화 완료! 명세를 먼저 작성하고 AI와 협업하세요.[/bold green]")
 
 @main.command()
