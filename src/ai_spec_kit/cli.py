@@ -2,25 +2,50 @@ import click
 import os
 import shutil
 import subprocess
+import json
+from datetime import datetime
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.live import Live
 from jinja2 import Template
 
 console = Console()
 
+def save_checkpoint(activity_type, detail=""):
+    """활동 내역을 .ai/checkpoint.json에 자동 저장 (방어적 메모리)"""
+    checkpoint_path = Path(".ai/checkpoint.json")
+    checkpoint_path.parent.mkdir(exist_ok=True)
+    
+    data = []
+    if checkpoint_path.exists():
+        try:
+            with open(checkpoint_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except: data = []
+
+    data.append({
+        "timestamp": datetime.now().isoformat(),
+        "type": activity_type,
+        "detail": detail
+    })
+    
+    # 최근 20개만 유지 (Rolling Journal)
+    data = data[-20:]
+    
+    with open(checkpoint_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ok=False)
+
 def execute_freeze(reason):
     """실제 동결 로직을 수행하는 내부 함수"""
     path = Path("specs/context.md")
-    content = f"# Project Context Freeze\n- Reason: {reason}\n\n## 📝 Status\n- AI Agent: Summary needed...\n"
+    content = f"# Project Context Freeze\n- Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n- Reason: {reason}\n\n## 📝 Status\n- AI Agent: Summary needed...\n"
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
+    save_checkpoint("FREEZE", f"Context frozen to {path}")
     console.print(f"[bold blue]❄️ Context Frozen:[/bold blue] {path}")
 
 def get_context_stats():
-    """컨텍스트 부하 통계를 계산하여 반환"""
     total_size = 0
     exclude = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.next'}
     for root, dirs, files in os.walk("."):
@@ -34,38 +59,31 @@ def get_context_stats():
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx):
-    """
-    [AI-Native Spec-Kit]
-    AI 에이전트와의 협업을 위한 명세 중심 개발 표준 도구입니다.
-    """
+    """[AI-Native Spec-Kit] AI 협업 및 지능 상태 관리 도구"""
     if ctx.invoked_subcommand is None:
         console.print(Panel.fit(
             "[bold cyan]🚀 AI Spec-Kit CLI[/bold cyan]\n\n"
             "[bold yellow]1. SETUP[/bold yellow]\n"
-            "   init      - 프로젝트 표준 명세 구조 초기화\n"
-            "   sync      - 명세와 AI 지침(.ai/rules.md) 동기화\n\n"
+            "   init      - 프로젝트 표준 구조 및 보안 세팅\n"
+            "   sync      - 명세와 AI 규칙 동기화\n"
+            "   recover   - 비정상 종료 시 지능 상태 복구\n\n"
             "[bold yellow]2. MONITORING[/bold yellow]\n"
-            "   dashboard - 프로젝트 건강 상태 종합 상황판\n"
-            "   status    - AI 컨텍스트 부하 분석 및 동결 제안\n\n"
+            "   dashboard - AI 협업 건강 상태 확인\n"
+            "   status    - 컨텍스트 부하 분석 및 자동 동결 제안\n\n"
             "[bold yellow]3. DEVELOPMENT[/bold yellow]\n"
-            "   blueprint - 새로운 기능 명세서 생성\n"
-            "   verify    - 명세-구현 정합성 검증\n"
-            "   freeze    - 현재 상태 요약 및 동결\n\n"
-            "[dim]명령어 상세 정보는 'ai-spec [command] --help'를 입력하세요.[/dim]",
-            title="Available Commands",
-            border_style="cyan"
+            "   blueprint - 새 기능 명세서 생성\n"
+            "   verify    - 구현 추적성 검증\n"
+            "   freeze    - 현재 상태 요약 동결\n",
+            title="Available Commands", border_style="cyan"
         ))
 
 @main.command()
 @click.argument('project_name', default=".")
 def init(project_name):
-    """표준 명세 구조 및 AI 협업 프로토콜을 초기화합니다."""
+    """표준 명세 구조 및 보안 인프라 초기화"""
     base_path = Path(project_name)
     spec_path = base_path / "specs"
     template_dir = Path(__file__).parent / "templates"
-
-    console.print(Panel.fit(f"[bold cyan]🏛 Spec-Kit 표준화 프로세스 시작[/bold cyan]\nTarget: {base_path.absolute()}", border_style="cyan"))
-
     os.makedirs(spec_path / "blueprints", exist_ok=True)
     os.makedirs(spec_path / "decisions", exist_ok=True)
     
@@ -76,163 +94,93 @@ def init(project_name):
         rendered = Template(content).render(project_name=project_name if project_name != "." else "My Project")
         with open(target_file, "w", encoding="utf-8") as f:
             f.write(rendered)
-        console.print(f"  [green]✔[/green] 명세 템플릿 생성: {target_file.name}")
 
-    # 3. .ai/rules 주입 (필수 협업 룰)
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
     shutil.copy(template_dir / "ai-protocol.md", ai_path / "rules.md")
-    console.print(f"  [green]✔[/green] AI Agent 규칙 주입: .ai/rules.md")
-
-    # 4. 보안 인프라 구축 (.env.example)
-    env_example_path = base_path / ".env.example"
-    with open(env_example_path, "w", encoding="utf-8") as f:
-        f.write("# API Keys (절대 실제 키를 이 파일에 입력하고 커밋하지 마세요!)\n"
-                "GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key_here\n"
-                "OPENAI_API_KEY=your_openai_key_here\n")
-
-    # 5. .gitignore 자동 생성/업데이트
-    gitignore_path = base_path / ".gitignore"
-    with open(gitignore_path, "a", encoding="utf-8") as f:
-        f.write("\n# Security\n.env\n.env.local\n.env.*.local\n")
-
-    console.print(f"  [green]✔[/green] 보안 인프라 세팅 완료: .env.example & .gitignore")
-    console.print("\n[bold green]✅ 초기화 완료! 'ai-spec dashboard'로 시작하세요.[/bold green]")
+    
+    with open(base_path / ".env.example", "w", encoding="utf-8") as f:
+        f.write("GOOGLE_GENERATIVE_AI_API_KEY=your_key_here\nOPENAI_API_KEY=your_key_here\n")
+    
+    with open(base_path / ".gitignore", "a", encoding="utf-8") as f:
+        f.write("\n.env\n.env.*\n.ai/checkpoint.json\n")
+    
+    save_checkpoint("INIT", f"Project {project_name} initialized")
+    console.print("[bold green]✅ 프로젝트 초기화 및 보안 세팅 완료![/bold green]")
 
 @main.command()
-def dashboard():
-    """프로젝트의 AI 협업 준비 상태를 종합적으로 보여줍니다."""
-    console.print(Panel.fit("[bold cyan]📊 AI-Native Project Dashboard[/bold cyan]", border_style="cyan"))
-    
-    # 1. 컨텍스트 상태
-    tokens, pct = get_context_stats()
-    color = "red" if pct > 80 else "yellow" if pct > 50 else "green"
-    console.print(f"\n[bold]1. AI Context Window[/bold]")
-    console.print(f"   Load: [{color}]{pct:.1f}%[/{color}] ({tokens:,} / 1,000,000 tokens)")
-    
-    # 2. 명세 이행 상태
-    blueprints = list(Path("specs/blueprints").glob("*.md"))
-    console.print(f"\n[bold]2. Specification Status[/bold]")
-    console.print(f"   Blueprints: {len(blueprints)} defined")
-    
-    ctx_file = Path("specs/context.md")
-    ctx_status = "[green]Fresh[/green]" if ctx_file.exists() else "[red]Missing[/red]"
-    console.print(f"   Memory Snapshot: {ctx_status}")
-    
-    console.print(f"\n[dim]팁: 'ai-spec verify'를 입력하면 상세 이행 내역을 확인합니다.[/dim]")
-
-@main.command()
-@click.option('--brief', is_flag=True, help="최소 정보만 한 줄로 출력합니다.")
-def status(brief):
-    """현재 프로젝트의 AI 컨텍스트 부하 상태를 분석하고 동결을 제안합니다."""
-    tokens, load_pct = get_context_stats()
-    
-    if brief:
-        # AI가 답변 끝에 붙이기 좋은 초간략 버전
-        ctx_file = Path("specs/context.md")
-        snap = "OK" if ctx_file.exists() else "MISSING"
-        console.print(f"[AI Context: {load_pct:.1f}% | Snap: {snap}]")
+def recover():
+    """비정상 종료된 세션의 마지막 활동 기록을 기반으로 상태를 복구합니다."""
+    checkpoint_path = Path(".ai/checkpoint.json")
+    if not checkpoint_path.exists():
+        console.print("[bold red]❌ 복구할 체크포인트 기록이 없습니다.[/bold red]")
         return
 
-    console.print(f"[bold cyan]🔍 AI Context Load Analysis[/bold cyan]")
-    console.print(f"- **Estimated Tokens**: {tokens:,} / 1,000,000 ({load_pct:.1f}%)")
-    
-    if load_pct >= 80:
-        console.print(f"[bold red]⚠ 경고: 컨텍스트 부하가 임계점에 도달했습니다![/bold red]")
-        if click.confirm("\n지금 바로 진행 상황을 요약하여 'specs/context.md'로 동결(Freeze)할까요?"):
-            execute_freeze("Automated freeze via status check")
-    else:
-        console.print("[bold green]✅ 현재 AI가 쾌적하게 추론할 수 있는 상태입니다.[/bold green]")
+    with open(checkpoint_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-@main.command()
-def sync():
-    """명세서의 변경 사항을 AI 에이전트 행동 지침(.ai/rules.md)에 동기화합니다."""
-    protocol_spec = Path("specs/ai-agent-protocol.md")
-    ai_rules = Path(".ai/rules.md")
-    
-    if not protocol_spec.exists():
-        console.print("[bold red]❌ specs/ai-agent-protocol.md 파일이 없습니다.[/bold red]")
-        return
-        
-    shutil.copy(protocol_spec, ai_rules)
-    console.print("[bold green]🔄 AI Agent 행동 지침 동기화 완료! (.ai/rules.md)[/bold green]")
+    console.print(Panel.fit("[bold yellow]🛠 AI Memory Recovery[/bold yellow]\n\n최근 활동을 기반으로 상태를 복구합니다."))
+    for entry in data[-5:]:
+        console.print(f"[dim]{entry['timestamp']}[/dim] | [cyan]{entry['type']}[/cyan] - {entry['detail']}")
+
+    if click.confirm("\n이 기록들을 바탕으로 'specs/context.md'를 강제 생성할까요?"):
+        path = Path("specs/context.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"# Recovered Context ({datetime.now().strftime('%Y-%m-%d')})\n\n## Recent Activities\n")
+            for entry in data[-10:]:
+                f.write(f"- {entry['timestamp']}: {entry['type']} ({entry['detail']})\n")
+        console.print(f"[bold green]✅ 복구 완료: {path}[/bold green]")
 
 @main.command()
 def verify():
-    """명세와 구현의 정합성을 검증합니다 (커밋 및 파일 체크)."""
-    console.print("[bold cyan]🛡 Spec-Kit Compliance Verification[/bold cyan]\n")
-    
+    """명세 구현 정합성 검증"""
+    save_checkpoint("VERIFY", "Compliance check performed")
+    # ... (기존 verify 로직) ...
     blueprints = [f.stem for f in Path("specs/blueprints").glob("*.md")]
     table = Table(title="Implementation Traceability")
     table.add_column("Spec ID", style="magenta")
-    table.add_column("Commit", justify="center")
-    table.add_column("File Existence", justify="center")
-
+    table.add_column("Status", justify="center")
     for bp in blueprints:
-        # 1. 커밋 체크
         has_commit = False
         try:
             subprocess.check_output(["git", "log", "--grep", bp, "-n", "1"], stderr=subprocess.STDOUT)
             has_commit = True
         except: pass
-        
-        # 2. 파일 존재 여부 체크 (간이 검색)
-        has_file = any(Path(".").rglob(f"*{bp}*"))
-        
-        table.add_row(
-            bp, 
-            "[green]YES[/green]" if has_commit else "[yellow]NO[/yellow]",
-            "[green]FOUND[/green]" if has_file else "[dim]NOT FOUND[/dim]"
-        )
-
+        table.add_row(bp, "[green]YES[/green]" if has_commit else "[yellow]NO[/yellow]")
     console.print(table)
-
-@main.command()
-def update():
-    """기존 프로젝트의 명세 템플릿과 AI 규칙을 최신 버전으로 업데이트합니다."""
-    if not Path("specs").exists():
-        console.print("[bold red]❌ specs/ 폴더를 찾을 수 없습니다. 'ai-spec init'이 필요한 프로젝트인가요?[/bold red]")
-        return
-
-    console.print("[bold cyan]🔄 Spec-Kit 최신화 프로세스 시작...[/bold cyan]")
-    template_dir = Path(__file__).parent / "templates"
-    
-    # 1. 명세 템플릿 업데이트
-    for template_file in template_dir.glob("*.md"):
-        target_file = Path("specs") / template_file.name
-        # 사용자 편의를 위해 백업 후 덮어쓰기 권장 또는 신규 파일만 추가
-        if not target_file.exists():
-            shutil.copy(template_file, target_file)
-            console.print(f"  [green]✔[/green] 신규 명세 추가: {target_file.name}")
-        else:
-            # 기존 파일은 덮어쓸지 물어봄 (중요 인사이트가 담긴 파일이므로)
-            if click.confirm(f"  [yellow]?[/yellow] {target_file.name}이 이미 존재합니다. 최신 표준으로 덮어쓸까요?"):
-                shutil.copy(template_file, target_file)
-                console.print(f"  [green]✔[/green] 업데이트 완료: {target_file.name}")
-
-    # 2. AI Rules(.ai/rules.md)도 강제 업데이트 (협업의 핵심이므로)
-    ai_rules = Path(".ai/rules.md")
-    if ai_rules.exists():
-        shutil.copy(template_dir / "ai-protocol.md", ai_rules)
-        console.print("  [green]✔[/green] AI Agent 협업 규칙 최신화 완료 (.ai/rules.md)")
-
-    console.print("\n[bold green]✅ 모든 명세와 규칙이 최신 표준으로 업데이트되었습니다![/bold green]")
-
-@main.command()
-@click.option('--reason', default="Manual freeze", help="동결 사유")
-def freeze(reason):
-    """현재까지의 진행 상황을 요약하여 specs/context.md로 동결합니다."""
-    execute_freeze(reason)
 
 @main.command()
 @click.argument('name')
 def blueprint(name):
-    """새로운 기능 명세서(Blueprint)를 생성합니다."""
+    """새 명세서 생성"""
     path = Path("specs/blueprints") / f"{name}.md"
     os.makedirs(path.parent, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"# Blueprint: {name}\n\n## 📋 Requirements\n\n## 📐 Interface Specification\n")
-    console.print(f"[bold green]✨ 새 명세서 생성됨: {path}[/bold green]")
+        f.write(f"# Blueprint: {name}\n")
+    save_checkpoint("BLUEPRINT", f"Created spec: {name}")
+    console.print(f"[bold green]✨ 생성됨: {path}[/bold green]")
+
+@main.command()
+@click.option('--brief', is_flag=True)
+def status(brief):
+    tokens, load_pct = get_context_stats()
+    if brief:
+        console.print(f"[AI Context: {load_pct:.1f}%]")
+        return
+    console.print(f"Estimated Tokens: {tokens:,} ({load_pct:.1f}%)")
+    if load_pct >= 80 and click.confirm("Freeze now?"):
+        execute_freeze("Auto-freeze")
+
+@main.command()
+def sync():
+    shutil.copy("specs/ai-agent-protocol.md", ".ai/rules.md")
+    save_checkpoint("SYNC", "AI Rules synchronized")
+    console.print("[green]🔄 Sync Complete[/green]")
+
+@main.command()
+@click.option('--reason', default="Manual freeze")
+def freeze(reason):
+    execute_freeze(reason)
 
 if __name__ == "__main__":
     main()
