@@ -78,11 +78,25 @@ def init(project_name):
             f.write(rendered)
         console.print(f"  [green]✔[/green] 명세 템플릿 생성: {target_file.name}")
 
-    # .ai 폴더로 규칙 주입
+    # 3. .ai/rules 주입 (필수 협업 룰)
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
     shutil.copy(template_dir / "ai-protocol.md", ai_path / "rules.md")
     console.print(f"  [green]✔[/green] AI Agent 규칙 주입: .ai/rules.md")
+
+    # 4. 보안 인프라 구축 (.env.example)
+    env_example_path = base_path / ".env.example"
+    with open(env_example_path, "w", encoding="utf-8") as f:
+        f.write("# API Keys (절대 실제 키를 이 파일에 입력하고 커밋하지 마세요!)\n"
+                "GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key_here\n"
+                "OPENAI_API_KEY=your_openai_key_here\n")
+
+    # 5. .gitignore 자동 생성/업데이트
+    gitignore_path = base_path / ".gitignore"
+    with open(gitignore_path, "a", encoding="utf-8") as f:
+        f.write("\n# Security\n.env\n.env.local\n.env.*.local\n")
+
+    console.print(f"  [green]✔[/green] 보안 인프라 세팅 완료: .env.example & .gitignore")
     console.print("\n[bold green]✅ 초기화 완료! 'ai-spec dashboard'로 시작하세요.[/bold green]")
 
 @main.command()
