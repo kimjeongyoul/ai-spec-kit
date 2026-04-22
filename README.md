@@ -4,6 +4,16 @@
 
 GitHub의 `spec-kit` 철학을 계승하되, **AI 에이전트 협업 환경**에 최적화된 고유한 가치를 제공합니다.
 
+## 🚀 설치 및 실행 (Quick Installation)
+
+`uv`가 설치되어 있다면 아래 한 줄로 즉시 전역 도구로 설치하고 사용할 수 있습니다.
+
+```bash
+uv tool install ai-spec-kit --from git+https://github.com/kimjeongyoul/ai-spec-kit.git
+```
+
+설치 후 터미널 어디서든 `ai-spec` 명령어를 사용할 수 있습니다.
+
 ---
 
 ## 🏛 Why `ai-spec-kit`? (Comparison)
