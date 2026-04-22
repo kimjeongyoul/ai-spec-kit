@@ -31,13 +31,30 @@ def get_context_stats():
     est_tokens = total_size // 3 
     return est_tokens, min((est_tokens / 1000000) * 100, 100)
 
-@click.group()
-def main():
+@click.group(invoke_without_command=True)
+@click.pass_context
+def main(ctx):
     """
     [AI-Native Spec-Kit]
     AI 에이전트와의 협업을 위한 명세 중심 개발 표준 도구입니다.
     """
-    pass
+    if ctx.invoked_subcommand is None:
+        console.print(Panel.fit(
+            "[bold cyan]🚀 AI Spec-Kit CLI[/bold cyan]\n\n"
+            "[bold yellow]1. SETUP[/bold yellow]\n"
+            "   init      - 프로젝트 표준 명세 구조 초기화\n"
+            "   sync      - 명세와 AI 지침(.ai/rules.md) 동기화\n\n"
+            "[bold yellow]2. MONITORING[/bold yellow]\n"
+            "   dashboard - 프로젝트 건강 상태 종합 상황판\n"
+            "   status    - AI 컨텍스트 부하 분석 및 동결 제안\n\n"
+            "[bold yellow]3. DEVELOPMENT[/bold yellow]\n"
+            "   blueprint - 새로운 기능 명세서 생성\n"
+            "   verify    - 명세-구현 정합성 검증\n"
+            "   freeze    - 현재 상태 요약 및 동결\n\n"
+            "[dim]명령어 상세 정보는 'ai-spec [command] --help'를 입력하세요.[/dim]",
+            title="Available Commands",
+            border_style="cyan"
+        ))
 
 @main.command()
 @click.argument('project_name', default=".")
