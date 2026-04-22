@@ -10,6 +10,14 @@ from jinja2 import Template
 
 console = Console()
 
+def execute_freeze(reason):
+    """실제 동결 로직을 수행하는 내부 함수"""
+    path = Path("specs/context.md")
+    content = f"# Project Context Freeze\n- Reason: {reason}\n\n## 📝 Status\n- AI Agent: Summary needed...\n"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    console.print(f"[bold blue]❄️ Context Frozen:[/bold blue] {path}")
+
 @click.group()
 def main():
     """
@@ -48,7 +56,7 @@ def init(project_name):
 
 @main.command()
 def status():
-    """현재 프로젝트의 AI 컨텍스트 부하 상태를 분석합니다."""
+    """현재 프로젝트의 AI 컨텍스트 부하 상태를 분석하고 동결을 제안합니다."""
     console.print("[bold cyan]🔍 AI Context Load Analysis[/bold cyan]\n")
     total_size = 0
     exclude = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.next'}
@@ -60,16 +68,21 @@ def status():
     
     est_tokens = total_size // 3 
     load_pct = min((est_tokens / 1000000) * 100, 100)
+    
     console.print(f"- **Estimated Tokens**: {est_tokens:,} / 1,000,000 ({load_pct:.1f}%)")
-    if load_pct > 80:
-        console.print("[bold red]⚠ 경고: 컨텍스트가 너무 무겁습니다. 'ai-spec freeze'를 실행하세요.[/bold red]")
+    
+    if load_pct >= 80:
+        console.print(f"[bold red]⚠ 경고: 컨텍스트 부하가 {load_pct:.1f}%로 임계점에 도달했습니다![/bold red]")
+        if click.confirm("\n지금 바로 진행 상황을 요약하여 'specs/context.md'로 동결(Freeze)할까요?"):
+            execute_freeze("Automated freeze via status check")
+    else:
+        console.print("[bold green]✅ 현재 AI가 쾌적하게 추론할 수 있는 상태입니다.[/bold green]")
 
 @main.command()
 def verify():
     """명세와 구현의 정합성을 검증합니다 (커밋 추적성 체크)."""
     console.print("[bold cyan]🛡 Spec-Kit Compliance Verification[/bold cyan]\n")
     
-    # 1. Blueprint 추적성 체크
     blueprints = [f.stem for f in Path("specs/blueprints").glob("*.md")]
     table = Table(title="Blueprint Traceability")
     table.add_column("Specification", style="magenta")
@@ -78,7 +91,6 @@ def verify():
 
     for bp in blueprints:
         try:
-            # 커밋 메시지에서 해당 명세 ID가 포함되어 있는지 확인
             log = subprocess.check_output(
                 ["git", "log", "--grep", bp, "-n", "1", "--oneline"],
                 stderr=subprocess.STDOUT
@@ -93,11 +105,8 @@ def verify():
 
     console.print(table)
     
-    # 2. Context Freshness 체크
     ctx_file = Path("specs/context.md")
     if ctx_file.exists():
-        mtime = os.path.getmtime(ctx_file)
-        # 마지막 수정 이후 깃 변경사항이 있는지 간접 체크 (단순 예시)
         console.print(f"\n[dim]- Last Context Freeze: {ctx_file.name} exists.[/dim]")
     else:
         console.print("\n[bold red]✖ specs/context.md가 없습니다. 대화 요약 관리가 필요합니다.[/bold red]")
@@ -106,11 +115,7 @@ def verify():
 @click.option('--reason', default="Manual freeze", help="동결 사유")
 def freeze(reason):
     """현재까지의 진행 상황을 요약하여 specs/context.md로 동결합니다."""
-    path = Path("specs/context.md")
-    content = f"# Project Context Freeze\n- Reason: {reason}\n\n## 📝 Status\n- AI Agent: Summary needed...\n"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
-    console.print(f"[bold blue]❄️ Context Frozen:[/bold blue] {path}")
+    execute_freeze(reason)
 
 @main.command()
 @click.argument('name')
