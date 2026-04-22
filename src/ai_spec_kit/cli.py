@@ -188,6 +188,37 @@ def verify():
     console.print(table)
 
 @main.command()
+def update():
+    """기존 프로젝트의 명세 템플릿과 AI 규칙을 최신 버전으로 업데이트합니다."""
+    if not Path("specs").exists():
+        console.print("[bold red]❌ specs/ 폴더를 찾을 수 없습니다. 'ai-spec init'이 필요한 프로젝트인가요?[/bold red]")
+        return
+
+    console.print("[bold cyan]🔄 Spec-Kit 최신화 프로세스 시작...[/bold cyan]")
+    template_dir = Path(__file__).parent / "templates"
+    
+    # 1. 명세 템플릿 업데이트
+    for template_file in template_dir.glob("*.md"):
+        target_file = Path("specs") / template_file.name
+        # 사용자 편의를 위해 백업 후 덮어쓰기 권장 또는 신규 파일만 추가
+        if not target_file.exists():
+            shutil.copy(template_file, target_file)
+            console.print(f"  [green]✔[/green] 신규 명세 추가: {target_file.name}")
+        else:
+            # 기존 파일은 덮어쓸지 물어봄 (중요 인사이트가 담긴 파일이므로)
+            if click.confirm(f"  [yellow]?[/yellow] {target_file.name}이 이미 존재합니다. 최신 표준으로 덮어쓸까요?"):
+                shutil.copy(template_file, target_file)
+                console.print(f"  [green]✔[/green] 업데이트 완료: {target_file.name}")
+
+    # 2. AI Rules(.ai/rules.md)도 강제 업데이트 (협업의 핵심이므로)
+    ai_rules = Path(".ai/rules.md")
+    if ai_rules.exists():
+        shutil.copy(template_dir / "ai-protocol.md", ai_rules)
+        console.print("  [green]✔[/green] AI Agent 협업 규칙 최신화 완료 (.ai/rules.md)")
+
+    console.print("\n[bold green]✅ 모든 명세와 규칙이 최신 표준으로 업데이트되었습니다![/bold green]")
+
+@main.command()
 @click.option('--reason', default="Manual freeze", help="동결 사유")
 def freeze(reason):
     """현재까지의 진행 상황을 요약하여 specs/context.md로 동결합니다."""
