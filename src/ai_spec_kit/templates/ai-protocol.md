@@ -7,6 +7,7 @@
 
 ## 🧠 Context Management (1M Token Strategy)
 - **Monitoring**: 에이전트는 현재 대화의 토큰 소모량과 파일 데이터 부하를 상시 자가 모니터링한다.
+- **Self-Reporting**: 모든 주요 답변의 하단에 `ai-spec status --brief`를 실행한 결과를 포함하여 사용자에게 현재 컨텍스트 상태를 보고한다. (형식: `[AI Context: X.X% | Snap: OK]`)
 - **Threshold**: 대화 세션이 길어져 컨텍스트가 임계점(약 80%)에 도달했다고 판단될 경우, 즉시 작업을 중단하고 사용자에게 보고한다.
 - **Freeze & Resume**: 
    1. 경고 시 사용자에게 `ai-spec freeze` 실행을 요청하거나 직접 `specs/context.md` 생성을 제안한다.

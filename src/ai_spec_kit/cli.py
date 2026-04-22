@@ -91,9 +91,18 @@ def dashboard():
     console.print(f"\n[dim]팁: 'ai-spec verify'를 입력하면 상세 이행 내역을 확인합니다.[/dim]")
 
 @main.command()
-def status():
+@click.option('--brief', is_flag=True, help="최소 정보만 한 줄로 출력합니다.")
+def status(brief):
     """현재 프로젝트의 AI 컨텍스트 부하 상태를 분석하고 동결을 제안합니다."""
     tokens, load_pct = get_context_stats()
+    
+    if brief:
+        # AI가 답변 끝에 붙이기 좋은 초간략 버전
+        ctx_file = Path("specs/context.md")
+        snap = "OK" if ctx_file.exists() else "MISSING"
+        console.print(f"[AI Context: {load_pct:.1f}% | Snap: {snap}]")
+        return
+
     console.print(f"[bold cyan]🔍 AI Context Load Analysis[/bold cyan]")
     console.print(f"- **Estimated Tokens**: {tokens:,} / 1,000,000 ({load_pct:.1f}%)")
     
