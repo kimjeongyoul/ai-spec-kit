@@ -6,6 +6,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.live import Live
 from jinja2 import Template
 
 console = Console()
@@ -18,11 +19,23 @@ def execute_freeze(reason):
         f.write(content)
     console.print(f"[bold blue]❄️ Context Frozen:[/bold blue] {path}")
 
+def get_context_stats():
+    """컨텍스트 부하 통계를 계산하여 반환"""
+    total_size = 0
+    exclude = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.next'}
+    for root, dirs, files in os.walk("."):
+        dirs[:] = [d for d in dirs if d not in exclude]
+        for f in files:
+            if f.endswith(('.md', '.ts', '.tsx', '.py', '.java', '.json')):
+                total_size += os.path.getsize(os.path.join(root, f))
+    est_tokens = total_size // 3 
+    return est_tokens, min((est_tokens / 1000000) * 100, 100)
+
 @click.group()
 def main():
     """
     [AI-Native Spec-Kit]
-    명세(Specification)가 구현(Implementation)을 이끄는 개발 표준 도구입니다.
+    AI 에이전트와의 협업을 위한 명세 중심 개발 표준 도구입니다.
     """
     pass
 
@@ -48,68 +61,91 @@ def init(project_name):
             f.write(rendered)
         console.print(f"  [green]✔[/green] 명세 템플릿 생성: {target_file.name}")
 
+    # .ai 폴더로 규칙 주입
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
     shutil.copy(template_dir / "ai-protocol.md", ai_path / "rules.md")
     console.print(f"  [green]✔[/green] AI Agent 규칙 주입: .ai/rules.md")
-    console.print("\n[bold green]✅ 초기화 완료! 명세를 먼저 작성하고 AI와 협업하세요.[/bold green]")
+    console.print("\n[bold green]✅ 초기화 완료! 'ai-spec dashboard'로 시작하세요.[/bold green]")
+
+@main.command()
+def dashboard():
+    """프로젝트의 AI 협업 준비 상태를 종합적으로 보여줍니다."""
+    console.print(Panel.fit("[bold cyan]📊 AI-Native Project Dashboard[/bold cyan]", border_style="cyan"))
+    
+    # 1. 컨텍스트 상태
+    tokens, pct = get_context_stats()
+    color = "red" if pct > 80 else "yellow" if pct > 50 else "green"
+    console.print(f"\n[bold]1. AI Context Window[/bold]")
+    console.print(f"   Load: [{color}]{pct:.1f}%[/{color}] ({tokens:,} / 1,000,000 tokens)")
+    
+    # 2. 명세 이행 상태
+    blueprints = list(Path("specs/blueprints").glob("*.md"))
+    console.print(f"\n[bold]2. Specification Status[/bold]")
+    console.print(f"   Blueprints: {len(blueprints)} defined")
+    
+    ctx_file = Path("specs/context.md")
+    ctx_status = "[green]Fresh[/green]" if ctx_file.exists() else "[red]Missing[/red]"
+    console.print(f"   Memory Snapshot: {ctx_status}")
+    
+    console.print(f"\n[dim]팁: 'ai-spec verify'를 입력하면 상세 이행 내역을 확인합니다.[/dim]")
 
 @main.command()
 def status():
     """현재 프로젝트의 AI 컨텍스트 부하 상태를 분석하고 동결을 제안합니다."""
-    console.print("[bold cyan]🔍 AI Context Load Analysis[/bold cyan]\n")
-    total_size = 0
-    exclude = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.next'}
-    for root, dirs, files in os.walk("."):
-        dirs[:] = [d for d in dirs if d not in exclude]
-        for f in files:
-            if f.endswith(('.md', '.ts', '.tsx', '.py', '.java', '.json')):
-                total_size += os.path.getsize(os.path.join(root, f))
-    
-    est_tokens = total_size // 3 
-    load_pct = min((est_tokens / 1000000) * 100, 100)
-    
-    console.print(f"- **Estimated Tokens**: {est_tokens:,} / 1,000,000 ({load_pct:.1f}%)")
+    tokens, load_pct = get_context_stats()
+    console.print(f"[bold cyan]🔍 AI Context Load Analysis[/bold cyan]")
+    console.print(f"- **Estimated Tokens**: {tokens:,} / 1,000,000 ({load_pct:.1f}%)")
     
     if load_pct >= 80:
-        console.print(f"[bold red]⚠ 경고: 컨텍스트 부하가 {load_pct:.1f}%로 임계점에 도달했습니다![/bold red]")
+        console.print(f"[bold red]⚠ 경고: 컨텍스트 부하가 임계점에 도달했습니다![/bold red]")
         if click.confirm("\n지금 바로 진행 상황을 요약하여 'specs/context.md'로 동결(Freeze)할까요?"):
             execute_freeze("Automated freeze via status check")
     else:
         console.print("[bold green]✅ 현재 AI가 쾌적하게 추론할 수 있는 상태입니다.[/bold green]")
 
 @main.command()
+def sync():
+    """명세서의 변경 사항을 AI 에이전트 행동 지침(.ai/rules.md)에 동기화합니다."""
+    protocol_spec = Path("specs/ai-agent-protocol.md")
+    ai_rules = Path(".ai/rules.md")
+    
+    if not protocol_spec.exists():
+        console.print("[bold red]❌ specs/ai-agent-protocol.md 파일이 없습니다.[/bold red]")
+        return
+        
+    shutil.copy(protocol_spec, ai_rules)
+    console.print("[bold green]🔄 AI Agent 행동 지침 동기화 완료! (.ai/rules.md)[/bold green]")
+
+@main.command()
 def verify():
-    """명세와 구현의 정합성을 검증합니다 (커밋 추적성 체크)."""
+    """명세와 구현의 정합성을 검증합니다 (커밋 및 파일 체크)."""
     console.print("[bold cyan]🛡 Spec-Kit Compliance Verification[/bold cyan]\n")
     
     blueprints = [f.stem for f in Path("specs/blueprints").glob("*.md")]
-    table = Table(title="Blueprint Traceability")
-    table.add_column("Specification", style="magenta")
-    table.add_column("Status", justify="center")
-    table.add_column("Last Commit", style="green")
+    table = Table(title="Implementation Traceability")
+    table.add_column("Spec ID", style="magenta")
+    table.add_column("Commit", justify="center")
+    table.add_column("File Existence", justify="center")
 
     for bp in blueprints:
+        # 1. 커밋 체크
+        has_commit = False
         try:
-            log = subprocess.check_output(
-                ["git", "log", "--grep", bp, "-n", "1", "--oneline"],
-                stderr=subprocess.STDOUT
-            ).decode('utf-8').strip()
-            
-            if log:
-                table.add_row(bp, "[green]Implemented[/green]", log[:50] + "...")
-            else:
-                table.add_row(bp, "[yellow]Pending[/yellow]", "No linked commit found")
-        except:
-            table.add_row(bp, "[red]Error[/red]", "Git not initialized or error")
+            subprocess.check_output(["git", "log", "--grep", bp, "-n", "1"], stderr=subprocess.STDOUT)
+            has_commit = True
+        except: pass
+        
+        # 2. 파일 존재 여부 체크 (간이 검색)
+        has_file = any(Path(".").rglob(f"*{bp}*"))
+        
+        table.add_row(
+            bp, 
+            "[green]YES[/green]" if has_commit else "[yellow]NO[/yellow]",
+            "[green]FOUND[/green]" if has_file else "[dim]NOT FOUND[/dim]"
+        )
 
     console.print(table)
-    
-    ctx_file = Path("specs/context.md")
-    if ctx_file.exists():
-        console.print(f"\n[dim]- Last Context Freeze: {ctx_file.name} exists.[/dim]")
-    else:
-        console.print("\n[bold red]✖ specs/context.md가 없습니다. 대화 요약 관리가 필요합니다.[/bold red]")
 
 @main.command()
 @click.option('--reason', default="Manual freeze", help="동결 사유")
