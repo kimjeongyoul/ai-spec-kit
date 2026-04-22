@@ -54,6 +54,38 @@ def init(project_name):
     console.print("\n[bold green]✅ 이제 명세를 먼저 작성하고 AI와 대화를 시작하세요![/bold green]")
 
 @main.command()
+@click.option('--reason', default="Context limit reached", help="동결 사유")
+def freeze(reason):
+    """현재까지의 진행 상황을 요약하여 specs/context.md로 동결합니다 (1M 토큰 대비)."""
+    path = Path("specs/context.md")
+    if not Path("specs").exists():
+        console.print("[bold red]❌ specs/ 구조가 없습니다.[/bold red]")
+        return
+
+    content = f"""# Project Context Freeze
+- **Date**: {click.get_current_context().info_name} (Generated)
+- **Reason**: {reason}
+
+## 📝 Current Status
+[AI 에이전트가 현재까지 구현한 핵심 로직을 요약하게 하세요]
+
+## 🛠 Tech Decisions & Debt
+[지금까지 결정된 아키텍처와 해결해야 할 기술 부채]
+
+## 🚀 Next Steps
+[새로운 대화 세션에서 즉시 이어가야 할 작업 리스트]
+"""
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    
+    console.print(Panel.fit(
+        f"[bold blue]❄️ Context Frozen[/bold blue]\n\n"
+        f"파일이 생성되었습니다: [yellow]{path}[/bold yellow]\n"
+        f"이제 AI에게 이 파일을 읽게 한 뒤, 새 대화를 시작하여 컨텍스트를 초기화하세요.",
+        title="Context Management"
+    ))
+
+@main.command()
 @click.argument('name')
 def blueprint(name):
     """새로운 기능 명세서(Blueprint)를 생성합니다."""
