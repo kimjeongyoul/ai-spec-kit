@@ -15,4 +15,6 @@
 
 ## 🛠 Engineering Standard
 - **Blueprint First**: 구현보다 인터페이스와 요구사항 정의를 우선한다.
+- **Spec-Linked Commits**: 커밋 메시지 작성 시 반드시 `specs/engineering.md`에 정의된 규격을 준수하며, 작업의 대상이 된 명세 ID를 명시한다.
 - **Atomic Commits**: 각 작업 단위는 명세의 한 부분(Blueprint)과 일치해야 한다.
+
