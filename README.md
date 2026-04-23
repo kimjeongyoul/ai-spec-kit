@@ -18,11 +18,11 @@ uv tool install ai-spec-kit --from git+https://github.com/kimjeongyoul/ai-spec-k
 
 ## 🤖 AI 에이전트와 시작하기 (Onboarding Guide)
 
-`ai-spec init`으로 프로젝트를 초기화했다면, 사용 중인 AI 에이전트(Gemini, Claude 등)에게 첫 대화로 다음과 같이 지시하세요.
+`ai-spec init`을 실행하면 사용 중인 AI 에이전트(Gemini, Claude 등)에게 즉시 입력할 수 있는 맞춤형 온보딩 프롬프트가 출력됩니다. 이 가이드를 복사하여 AI에게 전달하세요.
 
-> **"이 프로젝트는 `ai-spec-kit` 표준을 따르고 있어. `.ai/rules.md` 파일을 읽고 내 협업 규칙을 숙지해줘. 그리고 `specs/` 폴더의 명세서들을 분석한 뒤에 개발을 시작하자."**
+> **"이 프로젝트는 `ai-spec-kit` 표준을 따르고 있어. 먼저 다음 파일들을 읽고 규칙을 숙지해줘: 1. `.ai/rules.md` (너의 행동 지침이야) 2. `specs/` 폴더의 모든 명세서들 (설계 방향이야). 모든 코드는 이 명세들을 준수해야 하며, 작업이 끝나면 `ai-spec status --brief`를 실행해서 상태를 보고해줘."**
 
-이 한마디로 AI는 사용자님의 설계 철학과 컨텍스트 관리 룰을 즉시 학습하게 됩니다.
+이 한마디로 AI는 사용자님의 설계 철학, 보안 요구사항, 그리고 웹 표준 규칙을 즉시 학습하게 됩니다.
 
 ---
 
@@ -30,9 +30,18 @@ uv tool install ai-spec-kit --from git+https://github.com/kimjeongyoul/ai-spec-k
 
 ### 1. 프로젝트 초기화
 ```bash
+# 기본 초기화
 ai-spec init
+
+# 보안 및 웹 표준 명세 포함 초기화
+ai-spec init --security --web
 ```
-- 표준 명세 구조(`specs/`) 생성 및 AI 행동 지침(`.ai/rules.md`) 주입.
+- **표준 명세 구조(`specs/`) 생성**: `architecture.md`, `engineering.md` 기본 생성.
+- **선택적 명세 확장**:
+    - `--security`: OWASP Top 10 및 LLM 보안 가드레일 주입.
+    - `--web`: 웹 접근성(WCAG 2.1) 및 웹 표준/SEO 규정 주입.
+- **AI 행동 지침(`.ai/rules.md`) 주입**: AI가 프로젝트의 규칙을 스스로 학습하도록 설정.
+- **지능형 환경 설정**: `.env.example` 생성 및 `.gitignore` 자동 최적화(중복 방지 로직 포함).
 
 ### 2. 컨텍스트 및 건강 상태 확인
 ```bash

@@ -79,7 +79,9 @@ def main(ctx):
 
 @main.command()
 @click.argument('project_name', default=".")
-def init(project_name):
+@click.option('--security', is_flag=True, help="Include OWASP Security specification")
+@click.option('--web', is_flag=True, help="Include Web Standards & Accessibility specifications")
+def init(project_name, security, web):
     """표준 명세 구조 및 보안 인프라 초기화"""
     base_path = Path(project_name)
     spec_path = base_path / "specs"
@@ -87,13 +89,22 @@ def init(project_name):
     os.makedirs(spec_path / "blueprints", exist_ok=True)
     os.makedirs(spec_path / "decisions", exist_ok=True)
     
-    for template_file in template_dir.glob("*.md"):
-        target_file = spec_path / template_file.name
-        with open(template_file, "r", encoding="utf-8") as f:
+    # Core templates to copy and render
+    core_templates = ["ai-protocol.md", "architecture.md", "engineering.md"]
+    for t_name in core_templates:
+        target_file = spec_path / t_name
+        with open(template_dir / t_name, "r", encoding="utf-8") as f:
             content = f.read()
         rendered = Template(content).render(project_name=project_name if project_name != "." else "My Project")
         with open(target_file, "w", encoding="utf-8") as f:
             f.write(rendered)
+
+    # Optional templates
+    if security:
+        shutil.copy(template_dir / "security.md", spec_path / "security.md")
+    if web:
+        shutil.copy(template_dir / "accessibility.md", spec_path / "accessibility.md")
+        shutil.copy(template_dir / "web-standards.md", spec_path / "web-standards.md")
 
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
@@ -102,11 +113,42 @@ def init(project_name):
     with open(base_path / ".env.example", "w", encoding="utf-8") as f:
         f.write("GOOGLE_GENERATIVE_AI_API_KEY=your_key_here\nOPENAI_API_KEY=your_key_here\n")
     
-    with open(base_path / ".gitignore", "a", encoding="utf-8") as f:
-        f.write("\n.env\n.env.*\n.ai/checkpoint.json\n")
+    gitignore_path = base_path / ".gitignore"
+    git_ignore_rules = [
+        "\n# --- AI Spec-Kit ---",
+        ".ai/checkpoint.json  # AI activity journal (Local only)",
+        ".env                  # API Keys and Secrets",
+        ".env.*",
+        "!.env.example"
+    ]
+    
+    existing_content = ""
+    if gitignore_path.exists():
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            existing_content = f.read()
+    
+    with open(gitignore_path, "a", encoding="utf-8") as f:
+        for rule in git_ignore_rules:
+            clean_rule = rule.split('#')[0].strip()
+            if not clean_rule or clean_rule not in existing_content:
+                f.write(rule + "\n")
     
     save_checkpoint("INIT", f"Project {project_name} initialized")
-    console.print("[bold green]✅ 프로젝트 초기화 및 보안 세팅 완료![/bold green]")
+    
+    console.print(Panel("[bold green]✅ 프로젝트 초기화 및 보안 세팅 완료![/bold green]", border_style="green"))
+    
+    # AI Onboarding Guide
+    onboarding_msg = (
+        "\n[bold cyan]🤖 AI 에이전트와 대화를 시작할 때 아래 문구를 복사해서 붙여넣으세요:[/bold cyan]\n\n"
+        "----------------------------------------------------------------------\n"
+        "이 프로젝트는 `ai-spec-kit` 표준을 따르고 있어. 먼저 다음 파일들을 읽고 규칙을 숙지해줘:\n"
+        "1. `.ai/rules.md` (너의 행동 지침이야)\n"
+        "2. `specs/` 폴더의 모든 명세서들 (설계 방향이야)\n\n"
+        "모든 코드는 이 명세들을 준수해야 하며, 작업이 끝나면 `ai-spec status --brief`를 \n"
+        "실행해서 상태를 보고해줘.\n"
+        "----------------------------------------------------------------------"
+    )
+    console.print(onboarding_msg)
 
 @main.command()
 def recover():

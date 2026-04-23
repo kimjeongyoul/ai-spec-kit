@@ -1,17 +1,40 @@
-# Python
+# --- AI Spec-Kit Core ---
+.ai/checkpoint.json
+specs/context.md
+
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
-dist/
+*.so
+.Python
 build/
-.venv/
-.uv/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
 
-# IDEs
+# --- Environments ---
+.venv/
+venv/
+.uv/
+.python-version
+.env
+.env.*
+!.env.example
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- IDEs & OS ---
 .idea/
 .vscode/
+.gradle/
 *.swp
-
-# OS
 .DS_Store
 Thumbs.db
