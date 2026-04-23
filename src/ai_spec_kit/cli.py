@@ -56,10 +56,30 @@ def get_context_stats():
     est_tokens = total_size // 3 
     return est_tokens, min((est_tokens / 1000000) * 100, 100)
 
+def check_production_shield():
+    """운영 환경(Production)에서 실행되는 것을 방지하는 안전 장치"""
+    shield_vars = ["APP_ENV", "PYTHON_ENV", "NODE_ENV", "STAGE", "ENV"]
+    prod_indicators = ["PROD", "PRODUCTION", "RELEASE"]
+    
+    for var in shield_vars:
+        val = os.getenv(var, "").upper()
+        if any(ind in val for ind in prod_indicators):
+            console.print(Panel(
+                f"[bold red]🚫 PRODUCTION SHIELD ACTIVATED[/bold red]\n\n"
+                f"현재 환경 변수 [bold yellow]{var}={os.getenv(var)}[/bold yellow]가 감지되었습니다.\n"
+                "이 도구는 명세 중심의 '개발 및 설계' 전용 도구입니다.\n"
+                "운영(Production) 환경에서의 실행은 코드 및 데이터 오염 위험이 있어 차단됩니다.\n\n"
+                "[dim]실행이 꼭 필요하다면 환경 변수를 변경하거나 해제하세요.[/dim]",
+                title="Safety Error", border_style="red"
+            ))
+            exit(1)
+
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx):
     """[AI-Native Spec-Kit] AI 협업 및 지능 상태 관리 도구"""
+    check_production_shield()
+    
     if ctx.invoked_subcommand is None:
         console.print(Panel.fit(
             "[bold cyan]🚀 AI Spec-Kit CLI[/bold cyan]\n\n"
@@ -162,10 +182,10 @@ def init(project_name, security, web):
         "\n[bold cyan]🤖 AI 에이전트와 대화를 시작할 때 아래 문구를 복사해서 붙여넣으세요:[/bold cyan]\n\n"
         "----------------------------------------------------------------------\n"
         "이 프로젝트는 `ai-spec-kit` 표준을 따르고 있어. 먼저 다음 파일들을 읽고 규칙을 숙지해줘:\n"
-        "1. `.ai/rules.md` (너의 행동 지침이야)\n"
+        "1. `.ai/rules.md` (너의 행동 지침이자 필수 보고 규칙이야)\n"
         "2. `specs/` 폴더의 모든 명세서들 (설계 방향이야)\n\n"
-        "모든 코드는 이 명세들을 준수해야 하며, 작업이 끝나면 `ai-spec status --brief`를 \n"
-        "실행해서 상태를 보고해줘.\n"
+        "너는 매 답변 끝에 `ai-spec status --brief`를 실행하여 현재 상태를 보고해야 해.\n"
+        "이 지침을 확인했다면 준비되었다고 말해줘.\n"
         "----------------------------------------------------------------------"
     )
     console.print(onboarding_msg)
@@ -222,14 +242,45 @@ def blueprint(name):
     save_checkpoint("BLUEPRINT", f"Created spec: {name}")
     console.print(f"[bold green]✨ 생성됨: {path}[/bold green]")
 
+def get_health_status():
+    """프로젝트 건강 상태 체크 (Snap 및 Spec 상태)"""
+    # 1. Snap (Checkpoint) Status
+    checkpoint_path = Path(".ai/checkpoint.json")
+    snap_status = "ERR"
+    if checkpoint_path.exists():
+        try:
+            with open(checkpoint_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data:
+                    snap_status = "OK"
+        except: pass
+    
+    # 2. Spec Compliance (기본 명세 파일 존재 여부)
+    required_specs = ["architecture.md", "engineering.md", "ai-protocol.md"]
+    found_specs = 0
+    for s in required_specs:
+        if (Path("specs") / s).exists():
+            found_specs += 1
+    compliance_pct = int((found_specs / len(required_specs)) * 100)
+    
+    return snap_status, compliance_pct
+
 @main.command()
 @click.option('--brief', is_flag=True)
 def status(brief):
     tokens, load_pct = get_context_stats()
+    snap_status, compliance = get_health_status()
+    
     if brief:
-        console.print(f"[AI Context: {load_pct:.1f}%]")
+        # Traffic Light 스타일의 한 줄 상태바
+        color = "green" if load_pct < 70 else "yellow" if load_pct < 90 else "red"
+        console.print(f"[[bold {color}]AI Context: {load_pct:.1f}%[/bold {color}] | Snap: {snap_status} | Spec: {compliance}%]")
         return
+    
     console.print(f"Estimated Tokens: {tokens:,} ({load_pct:.1f}%)")
+    console.print(f"Checkpoint Status: [cyan]{snap_status}[/cyan]")
+    console.print(f"Spec Compliance  : [cyan]{compliance}%[/cyan]")
+    
     if load_pct >= 80 and click.confirm("Freeze now?"):
         execute_freeze("Auto-freeze")
 
