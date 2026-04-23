@@ -30,17 +30,18 @@ uv tool install ai-spec-kit --from git+https://github.com/kimjeongyoul/ai-spec-k
 
 ### 1. 프로젝트 초기화
 ```bash
-# 기본 초기화
+# 기본 초기화 (아키텍처, 엔지니어링, AI 프로토콜 포함)
 ai-spec init
 
-# 보안 및 웹 표준 명세 포함 초기화
-ai-spec init --security --web
+# 보안, 웹 표준, 라이선스 명세 포함 초기화
+ai-spec init --security --web --license
 ```
-- **표준 명세 구조(`specs/`) 생성**: `architecture.md`, `engineering.md` 기본 생성.
+- **표준 명세 구조(`specs/`) 생성**: `architecture.md`, `engineering.md`, `ai-protocol.md` 기본 생성.
 - **선택적 명세 확장**:
-    - `--security`: OWASP Top 10 및 LLM 보안 가드레일 주입.
-    - `--web`: 웹 접근성(WCAG 2.1) 및 웹 표준/SEO 규정 주입.
-- **AI 행동 지침(`.ai/rules.md`) 주입**: AI가 프로젝트의 규칙을 스스로 학습하도록 설정.
+    - `--security`: OWASP Top 10 및 LLM 보안 가드레일(Prompt Injection 방지 등) 주입.
+    - `--web`: 웹 접근성(WCAG 2.1) 및 웹 표준/SEO 최적화 규정 주입.
+    - `--license`: 오픈소스 라이선스 준수 정책 및 고지 의무 자동화 명세 주입.
+- **AI 행동 지침(`.ai/rules.md`) 주입**: `ai-protocol.md`를 기반으로 AI가 프로젝트 규칙과 보고 체계를 스스로 학습하도록 설정.
 - **지능형 환경 설정**: `.env.example` 생성 및 `.gitignore` 자동 최적화(중복 방지 로직 포함).
 
 ### 2. 컨텍스트 및 건강 상태 확인
@@ -61,7 +62,19 @@ ai-spec verify
 ```
 - 설계 명세와 실제 커밋 로그/파일 구조를 대조하여 정합성 체크.
 
-### 5. 최신 표준 업데이트
+### 5. 새 기능 명세(Blueprint) 생성
+```bash
+ai-spec blueprint [기능명]
+```
+- 새로운 기능 구현을 위한 설계 템플릿을 `specs/blueprints/` 폴더에 생성합니다.
+
+### 6. 지능 상태 동결 (Context Freeze)
+```bash
+ai-spec freeze --reason "v1.0 배포 직전"
+```
+- 현재까지의 대화 맥락과 결정 사항을 `specs/context.md`에 요약하여 저장합니다. AI가 기억을 잃었을 때 이 파일을 읽게 하여 즉시 복구할 수 있습니다.
+
+### 7. 최신 표준 업데이트
 ```bash
 # 1. 도구 자체 업데이트
 uv tool install ai-spec-kit --from git+https://github.com/kimjeongyoul/ai-spec-kit.git --force

@@ -103,7 +103,8 @@ def main(ctx):
 @click.argument('project_name', default=".")
 @click.option('--security', is_flag=True, help="Include OWASP Security specification")
 @click.option('--web', is_flag=True, help="Include Web Standards & Accessibility specifications")
-def init(project_name, security, web):
+@click.option('--license', 'license_opt', is_flag=True, help="Include Open Source License policy")
+def init(project_name, security, web, license_opt):
     """표준 명세 구조 및 보안 인프라 초기화"""
     base_path = Path(project_name)
     spec_path = base_path / "specs"
@@ -131,6 +132,9 @@ def init(project_name, security, web):
         shutil.copy(template_dir / "accessibility.md", spec_path / "accessibility.md")
         shutil.copy(template_dir / "web-standards.md", spec_path / "web-standards.md")
         applied_specs.append("Web Accessibility & Standards")
+    if license_opt:
+        shutil.copy(template_dir / "license-policy.md", spec_path / "license-policy.md")
+        applied_specs.append("Open Source License Policy")
 
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
@@ -169,13 +173,13 @@ def init(project_name, security, web):
     ))
 
     # 옵션 팁 출력
-    if not (security and web and license):
+    if not (security and web and license_opt):
         tips = "\n[bold yellow]💡 Tip: 아직 사용하지 않은 강력한 옵션들이 있습니다![/bold yellow]\n"
         if not security:
             tips += " - [bold cyan]--security[/bold cyan]: OWASP & LLM 보안 명세를 추가합니다.\n"
         if not web:
             tips += " - [bold cyan]--web[/bold cyan]: 웹 접근성 및 표준 명세를 추가합니다.\n"
-        if not license:
+        if not license_opt:
             tips += " - [bold cyan]--license[/bold cyan]: 오픈소스 라이선스 정책 명세를 추가합니다.\n"
         console.print(tips)
     
