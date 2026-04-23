@@ -34,7 +34,7 @@ def save_checkpoint(activity_type, detail=""):
     data = data[-20:]
     
     with open(checkpoint_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ok=False)
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def execute_freeze(reason):
     """실제 동결 로직을 수행하는 내부 함수"""
