@@ -169,12 +169,14 @@ def init(project_name, security, web):
     ))
 
     # 옵션 팁 출력
-    if not (security and web):
+    if not (security and web and license):
         tips = "\n[bold yellow]💡 Tip: 아직 사용하지 않은 강력한 옵션들이 있습니다![/bold yellow]\n"
         if not security:
             tips += " - [bold cyan]--security[/bold cyan]: OWASP & LLM 보안 명세를 추가합니다.\n"
         if not web:
             tips += " - [bold cyan]--web[/bold cyan]: 웹 접근성 및 표준 명세를 추가합니다.\n"
+        if not license:
+            tips += " - [bold cyan]--license[/bold cyan]: 오픈소스 라이선스 정책 명세를 추가합니다.\n"
         console.print(tips)
     
     # AI Onboarding Guide
@@ -292,6 +294,12 @@ def sync():
 
 @main.command()
 @click.option('--reason', default="Manual freeze")
+def freeze(reason):
+    execute_freeze(reason)
+
+if __name__ == "__main__":
+    main()
+anual freeze")
 def freeze(reason):
     execute_freeze(reason)
 
