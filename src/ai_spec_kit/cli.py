@@ -65,6 +65,7 @@ def main(ctx):
             "[bold cyan]🚀 AI Spec-Kit CLI[/bold cyan]\n\n"
             "[bold yellow]1. SETUP[/bold yellow]\n"
             "   init      - 프로젝트 표준 구조 및 보안 세팅\n"
+            "               [dim](옵션: --security, --web)[/dim]\n"
             "   sync      - 명세와 AI 규칙 동기화\n"
             "   recover   - 비정상 종료 시 지능 상태 복구\n\n"
             "[bold yellow]2. MONITORING[/bold yellow]\n"
@@ -73,7 +74,8 @@ def main(ctx):
             "[bold yellow]3. DEVELOPMENT[/bold yellow]\n"
             "   blueprint - 새 기능 명세서 생성\n"
             "   verify    - 구현 추적성 검증\n"
-            "   freeze    - 현재 상태 요약 동결\n",
+            "   freeze    - 현재 상태 요약 동결\n\n"
+            "[bold dim]💡 Tip: 'ai-spec init --security --web'으로 모든 보안/웹 표준을 한 번에 세팅하세요![/bold dim]",
             title="Available Commands", border_style="cyan"
         ))
 
@@ -89,6 +91,8 @@ def init(project_name, security, web):
     os.makedirs(spec_path / "blueprints", exist_ok=True)
     os.makedirs(spec_path / "decisions", exist_ok=True)
     
+    applied_specs = ["Core Architecture", "Engineering Standard", "AI Protocol"]
+    
     # Core templates to copy and render
     core_templates = ["ai-protocol.md", "architecture.md", "engineering.md"]
     for t_name in core_templates:
@@ -102,9 +106,11 @@ def init(project_name, security, web):
     # Optional templates
     if security:
         shutil.copy(template_dir / "security.md", spec_path / "security.md")
+        applied_specs.append("OWASP Security")
     if web:
         shutil.copy(template_dir / "accessibility.md", spec_path / "accessibility.md")
         shutil.copy(template_dir / "web-standards.md", spec_path / "web-standards.md")
+        applied_specs.append("Web Accessibility & Standards")
 
     ai_path = base_path / ".ai"
     os.makedirs(ai_path, exist_ok=True)
@@ -135,7 +141,21 @@ def init(project_name, security, web):
     
     save_checkpoint("INIT", f"Project {project_name} initialized")
     
-    console.print(Panel("[bold green]✅ 프로젝트 초기화 및 보안 세팅 완료![/bold green]", border_style="green"))
+    summary = "\n".join([f" - {s}" for s in applied_specs])
+    console.print(Panel(
+        f"[bold green]✅ 프로젝트 초기화 완료![/bold green]\n\n"
+        f"[bold white]적용된 명세 목록:[/bold white]\n{summary}", 
+        border_style="green"
+    ))
+
+    # 옵션 팁 출력
+    if not (security and web):
+        tips = "\n[bold yellow]💡 Tip: 아직 사용하지 않은 강력한 옵션들이 있습니다![/bold yellow]\n"
+        if not security:
+            tips += " - [bold cyan]--security[/bold cyan]: OWASP & LLM 보안 명세를 추가합니다.\n"
+        if not web:
+            tips += " - [bold cyan]--web[/bold cyan]: 웹 접근성 및 표준 명세를 추가합니다.\n"
+        console.print(tips)
     
     # AI Onboarding Guide
     onboarding_msg = (
