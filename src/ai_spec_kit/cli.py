@@ -86,6 +86,7 @@ def main(ctx):
             "[bold yellow]1. SETUP[/bold yellow]\n"
             "   init      - 프로젝트 표준 구조 및 보안 세팅\n"
             "               [dim](옵션: --security, --web)[/dim]\n"
+            "   update    - 프로젝트 내 템플릿 및 규칙 업데이트\n"
             "   sync      - 명세와 AI 규칙 동기화\n"
             "   recover   - 비정상 종료 시 지능 상태 복구\n\n"
             "[bold yellow]2. MONITORING[/bold yellow]\n"
@@ -291,6 +292,61 @@ def status(brief):
         execute_freeze("Auto-freeze")
 
 @main.command()
+@click.option('--security', is_flag=True, help="Update OWASP Security specification")
+@click.option('--web', is_flag=True, help="Update Web Standards & Accessibility specifications")
+@click.option('--license', 'license_opt', is_flag=True, help="Update Open Source License policy")
+def update(security, web, license_opt):
+    """프로젝트 내 템플릿 및 규칙 업데이트 (덮어쓰기 확인)"""
+    spec_path = Path("specs")
+    template_dir = Path(__file__).parent / "templates"
+    
+    if not spec_path.exists():
+        console.print("[bold red]❌ 'specs/' 폴더가 없습니다. 먼저 'ai-spec init'을 실행하세요.[/bold red]")
+        return
+
+    def update_file(template_name, target_path, render=False):
+        if target_path.exists():
+            if not click.confirm(f"'{target_path}'가 이미 존재합니다. 덮어쓸까요?", default=False):
+                console.print(f"[yellow]⏩ Skip:[/yellow] {target_path}")
+                return False
+        
+        with open(template_dir / template_name, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        if render:
+            project_name = Path.cwd().name
+            rendered = Template(content).render(project_name=project_name)
+            with open(target_path, "w", encoding="utf-8") as f:
+                f.write(rendered)
+        else:
+            shutil.copy(template_dir / template_name, target_path)
+        
+        console.print(f"[green]✅ Updated:[/green] {target_path}")
+        return True
+
+    # Core updates
+    update_file("ai-protocol.md", spec_path / "ai-protocol.md", render=True)
+    update_file("architecture.md", spec_path / "architecture.md", render=True)
+    update_file("engineering.md", spec_path / "engineering.md", render=True)
+    
+    # Optional updates
+    if security:
+        update_file("security.md", spec_path / "security.md")
+    if web:
+        update_file("accessibility.md", spec_path / "accessibility.md")
+        update_file("web-standards.md", spec_path / "web-standards.md")
+    if license_opt:
+        update_file("license-policy.md", spec_path / "license-policy.md")
+
+    # .ai/rules.md update
+    ai_rules_path = Path(".ai/rules.md")
+    if ai_rules_path.exists():
+        update_file("ai-protocol.md", ai_rules_path)
+
+    save_checkpoint("UPDATE", "Templates updated")
+    console.print("[bold green]✨ 모든 업데이트 작업이 완료되었습니다![/bold green]")
+
+@main.command()
 def sync():
     shutil.copy("specs/ai-agent-protocol.md", ".ai/rules.md")
     save_checkpoint("SYNC", "AI Rules synchronized")
@@ -298,12 +354,6 @@ def sync():
 
 @main.command()
 @click.option('--reason', default="Manual freeze")
-def freeze(reason):
-    execute_freeze(reason)
-
-if __name__ == "__main__":
-    main()
-anual freeze")
 def freeze(reason):
     execute_freeze(reason)
 
