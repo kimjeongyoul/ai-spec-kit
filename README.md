@@ -61,7 +61,7 @@ ai-spec verify
 1. **Setup:** `ai-spec init`으로 구조 잡기.
 2. **Specify:** `ai-spec blueprint <name>`으로 새 기능 정의.
 3. **Prompt:** AI에게 `.ai/rules.md`와 `specs/`의 명세를 먼저 읽으라고 지시.
-4. **Monitor:** AI가 답변할 때마다 `ai-spec status --brief`를 출력하게 하여 상태 유지.
+4. **Monitor:** AI가 작업 완료 시 `ai-spec status --brief`를 출력하게 하여 프로젝트 건강 상태 공유.
 5. **Freeze:** 중요한 결정이 내려지면 `ai-spec freeze`로 맥락 고정.
 
 ---
