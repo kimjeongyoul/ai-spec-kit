@@ -281,7 +281,8 @@ def status(brief):
     if brief:
         # Traffic Light 스타일의 한 줄 상태바
         color = "green" if load_pct < 70 else "yellow" if load_pct < 90 else "red"
-        console.print(f"[[bold {color}]AI Context: {load_pct:.1f}%[/bold {color}] | Snap: {snap_status} | Spec: {compliance}%]")
+        console.print("✦  4. Health Status:")
+        console.print(f"  [bold {color}][[AI Context: {load_pct:.1f}% | Snap: {snap_status} | Spec: {compliance}%]][/bold {color}]")
         return
     
     console.print(f"Estimated Tokens: {tokens:,} ({load_pct:.1f}%)")
