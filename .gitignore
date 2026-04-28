@@ -18,11 +18,21 @@ dist/
 # --- Environments ---
 .venv/
 venv/
+env/
 .uv/
 .python-version
 .env
 .env.*
 !.env.example
+
+# --- Logs ---
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Web/Frontend (Optional but safe) ---
+node_modules/
+.npm/
 
 # --- Testing ---
 .pytest_cache/
