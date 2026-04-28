@@ -8,7 +8,7 @@ This project follows the `ai-spec-kit` standard. As an AI agent, you must adhere
 - **Self-Correction**: If you deviate from the specs, acknowledge it and suggest a fix.
 
 ## 2. Mandatory Activity Logging
-- **Every Turn**: You MUST execute `ai-spec status --brief` at the end of EVERY response.
+- **Task Completion**: Execute `ai-spec status --brief` when a task is completed or specifically requested by the user.
 - **Reporting**: The tool output is sufficient; do not repeat the status numbers in your text.
 
 ## 3. Active Optimization & Comparison
